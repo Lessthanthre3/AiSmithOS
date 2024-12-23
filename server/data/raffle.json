@@ -1,0 +1,11 @@
+{
+  "currentRaffle": {
+    "tickets": [],
+    "prizePool": 0,
+    "isActive": true,
+    "winningNumber": null,
+    "startTime": null,
+    "endTime": null
+  },
+  "pastRaffles": []
+}
