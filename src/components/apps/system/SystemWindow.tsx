@@ -1,30 +1,29 @@
-import React from 'react';
-import { 
-  VStack, 
-  Text, 
-  Box, 
-  Tabs, 
-  TabList, 
-  TabPanels, 
-  TabPanel, 
-  Tab, 
-  Button, 
-  Input, 
-  useToast, 
-  HStack, 
-  Badge, 
-  Table, 
-  Thead, 
-  Tbody, 
-  Tr, 
-  Th, 
-  Td, 
-  Switch, 
-  FormControl, 
-  FormLabel, 
-  Select 
-} from '@chakra-ui/react';
 import { useState } from 'react';
+import {
+  VStack,
+  Text,
+  Box,
+  Tabs,
+  TabList,
+  TabPanels,
+  TabPanel,
+  Tab,
+  Button,
+  Input,
+  useToast,
+  HStack,
+  Badge,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Switch,
+  FormControl,
+  FormLabel,
+  Select,
+} from '@chakra-ui/react';
 import { useWallet } from '../../../contexts/WalletContext';
 import { useSystem } from '../../../contexts/SystemContext';
 import { sha256 } from 'js-sha256';
@@ -43,7 +42,7 @@ interface AdminState {
   lastAttempt: number;
 }
 
-const SystemWindow: React.FC = () => {
+const SystemWindow = () => {
   const [adminState, setAdminState] = useState<AdminState>({
     isAuthenticated: false,
     isLoading: false,
@@ -52,7 +51,7 @@ const SystemWindow: React.FC = () => {
   });
   const [password, setPassword] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
-  const { publicKey, connectionStatus } = useWallet();
+  const { publicKey } = useWallet();
   const { toggleMatrixEffect, isMatrixEnabled } = useSystem();
   const toast = useToast();
 
@@ -130,23 +129,9 @@ const SystemWindow: React.FC = () => {
     });
   };
 
-  const renderWalletStatus = () => {
-    return (
-      <VStack align="start" spacing={2}>
-        <Text>Wallet Status: {connectionStatus}</Text>
-        {publicKey && (
-          <Text>Address: {publicKey.toString()}</Text>
-        )}
-      </VStack>
-    );
-  };
-
   return (
-    <Box p={4}>
-      <VStack spacing={4} align="stretch">
-        <Text fontSize="xl" fontWeight="bold">System Status</Text>
-        {renderWalletStatus()}
-      </VStack>
+    <VStack spacing={4} p={6} align="stretch" h="100%">
+      <Text fontSize="2xl" mb={4}>System Control Panel</Text>
 
       <Tabs 
         variant="matrix" 
@@ -373,7 +358,7 @@ const SystemWindow: React.FC = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
-    </Box>
+    </VStack>
   );
 };
 

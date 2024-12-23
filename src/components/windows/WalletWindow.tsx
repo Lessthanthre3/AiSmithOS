@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   VStack,
   HStack,
@@ -8,24 +7,24 @@ import {
   Input,
   FormControl,
   FormLabel,
-  Spinner,
 } from '@chakra-ui/react';
 import { useWallet } from '../../contexts/WalletContext';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-const WalletWindow: React.FC = () => {
-  const { publicKey, connect, disconnect, balance, isConnecting, connectionStatus, aisBalance } = useWallet();
-
-  const isConnected = connectionStatus === 'connected';
+const WalletWindow = () => {
+  const { connected, publicKey, balance, aisBalance, connect, disconnect } = useWallet();
 
   return (
     <VStack spacing={6} align="stretch">
-      {isConnecting ? (
-        <HStack spacing={2}>
-          <Spinner size="sm" />
-          <Text>Connecting...</Text>
-        </HStack>
-      ) : isConnected && publicKey ? (
+      {!connected ? (
+        <Button
+          onClick={connect}
+          variant="matrix"
+          size="lg"
+          width="100%"
+        >
+          Connect Phantom Wallet
+        </Button>
+      ) : (
         <>
           <Box
             p={4}
@@ -55,10 +54,10 @@ const WalletWindow: React.FC = () => {
                 <Text fontSize="sm" color="matrix.400">SOL Balance</Text>
                 <HStack justify="space-between">
                   <Text fontSize="xl" fontWeight="bold">
-                    {(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL
+                    {balance.toFixed(4)} SOL
                   </Text>
                   <Text fontSize="sm" color="matrix.400">
-                    ≈ ${(balance / LAMPORTS_PER_SOL * 0).toFixed(2)} USD
+                    ≈ ${(balance * 0).toFixed(2)} USD
                   </Text>
                 </HStack>
               </VStack>
@@ -113,15 +112,6 @@ const WalletWindow: React.FC = () => {
             Disconnect Wallet
           </Button>
         </>
-      ) : (
-        <Button
-          onClick={connect}
-          variant="matrix"
-          size="lg"
-          width="100%"
-        >
-          Connect Phantom Wallet
-        </Button>
       )}
     </VStack>
   );

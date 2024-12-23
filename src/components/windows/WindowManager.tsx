@@ -1,35 +1,25 @@
-import React, { ReactNode } from 'react';
 import { Box } from '@chakra-ui/react';
-import Window from './Window';
 import { useWindow } from '../../contexts/WindowContext';
+import Window from './Window';
 
-interface WindowProps {
-  children: ReactNode;
-  id: string;
-  appId: string;
-  title: string;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  zIndex: number;
-}
-
-const WindowManager: React.FC = () => {
+const WindowManager = () => {
   const { windows } = useWindow();
 
   return (
-    <Box position="relative" width="100%" height="100%">
+    <Box position="absolute" top={0} left={0} right={0} bottom={0}>
       {windows.map((window) => (
-        <Window
-          key={window.id}
-          id={window.id}
-          appId={window.appId}
-          title={window.title}
-          position={window.position}
-          size={window.size}
-          zIndex={window.zIndex}
-        >
-          {window.content}
-        </Window>
+        !window.isMinimized && (
+          <Window
+            key={window.id}
+            id={window.id}
+            title={window.title}
+            position={window.position}
+            size={window.size}
+            zIndex={window.zIndex}
+          >
+            {window.component}
+          </Window>
+        )
       ))}
     </Box>
   );
