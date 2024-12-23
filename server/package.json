@@ -2,10 +2,13 @@
   "name": "smithos-server",
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "build": "echo 'No build step needed for server'"
+    "vercel-build": "echo 'Building server...'"
   },
   "dependencies": {
     "cors": "^2.8.5",
