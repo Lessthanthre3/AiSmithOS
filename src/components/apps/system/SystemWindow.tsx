@@ -82,7 +82,7 @@ const SystemWindow = () => {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (hashedPassword === process.env.ADMIN_PASSWORD_HASH && isAdminWallet(publicKey)) {
+      if (hashedPassword === process.env.ADMIN_PASSWORD_HASH && isAdminWallet(publicKey?.toString())) {
         setAdminState(prev => ({
           ...prev,
           isAuthenticated: true,
@@ -142,7 +142,7 @@ const SystemWindow = () => {
       >
         <TabList>
           <Tab>System Info</Tab>
-          {isAdminWallet(publicKey) && <Tab>Admin Panel</Tab>}
+          {isAdminWallet(publicKey?.toString()) && <Tab>Admin Panel</Tab>}
           <Tab>Settings</Tab>
         </TabList>
 
@@ -160,8 +160,8 @@ const SystemWindow = () => {
 
               <Box bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
                 <Text fontWeight="bold" mb={2}>Connected Wallet</Text>
-                {publicKey ? (
-                  <Text fontSize="sm" wordBreak="break-all">{publicKey}</Text>
+                {publicKey?.toString() ? (
+                  <Text fontSize="sm" wordBreak="break-all">{publicKey?.toString()}</Text>
                 ) : (
                   <Text fontSize="sm">No wallet connected</Text>
                 )}
@@ -176,7 +176,7 @@ const SystemWindow = () => {
             </VStack>
           </TabPanel>
 
-          {isAdminWallet(publicKey) && (
+          {isAdminWallet(publicKey?.toString()) && (
             <TabPanel>
               {!adminState.isAuthenticated ? (
                 <VStack spacing={4} align="stretch">
@@ -200,7 +200,7 @@ const SystemWindow = () => {
                     isLoading={adminState.isLoading}
                     loadingText="Verifying..."
                     variant="matrix"
-                    isDisabled={!publicKey || !password}
+                    isDisabled={!publicKey?.toString() || !password}
                   >
                     Authenticate
                   </Button>

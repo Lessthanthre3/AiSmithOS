@@ -12,12 +12,13 @@ const WindowManager = () => {
           <Window
             key={window.id}
             id={window.id}
+            appId={window.id}
             title={window.title}
             position={window.position}
             size={window.size}
             zIndex={window.zIndex}
           >
-            {window.component}
+            {window.children}
           </Window>
         )
       ))}

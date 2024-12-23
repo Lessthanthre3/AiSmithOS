@@ -11,17 +11,12 @@ export const adminAuthLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later'
 });
 
-// Secure session configuration
-const SESSION_OPTIONS = {
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 2 // 2 hours
-  }
-};
+interface AuthenticatedRequest extends Request {
+  user?: {
+    publicKey: string;
+    role: string;
+  };
+}
 
 // Admin wallet addresses (should be stored in a secure database in production)
 const ADMIN_WALLETS = new Set([

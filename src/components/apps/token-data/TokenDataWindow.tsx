@@ -78,8 +78,9 @@ const TokenDataWindow = () => {
           <StatLabel>Price</StatLabel>
           <StatNumber>${pair ? parseFloat(pair.priceUsd).toFixed(6) : '0.00'}</StatNumber>
           <StatHelpText>
-            <StatArrow type={pair?.priceChange.h24 >= 0 ? "increase" : "decrease"} />
-            {pair ? pair.priceChange.h24.toFixed(2) : '0.00'}%
+            <Text color={pair.priceChange?.h24 >= 0 ? "green.500" : "red.500"}>
+              {pair.priceChange?.h24 >= 0 ? "+" : ""}{pair.priceChange?.h24}%
+            </Text>
           </StatHelpText>
         </Stat>
         <Stat bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
@@ -98,8 +99,8 @@ const TokenDataWindow = () => {
         <VStack align="stretch" spacing={2}>
           <Text>DEX: {pair?.dexId ?? 'N/A'}</Text>
           <Text>Chain: {pair?.chainId ?? 'N/A'}</Text>
-          <Text>1h Change: {pair?.priceChange.h1.toFixed(2) ?? '0.00'}%</Text>
-          <Text>6h Change: {pair?.priceChange.h6.toFixed(2) ?? '0.00'}%</Text>
+          <Text>1h Change: {pair.priceChange?.h1 || 0}%</Text>
+          <Text>6h Change: {pair.priceChange?.h6 || 0}%</Text>
         </VStack>
       </Box>
 

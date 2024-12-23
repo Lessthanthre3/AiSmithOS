@@ -4,7 +4,7 @@ import { courses } from './courses';
 import LearningMaterial from './LearningMaterial';
 import QuizComponent from './QuizComponent';
 
-type CourseLevel = 'Beginner' | 'Intermediate' | 'Advanced';
+export type CourseLevel = 'Beginner' | 'Intermediate' | 'Advanced';
 
 interface Example {
   title: string;
@@ -36,7 +36,7 @@ interface Module {
   quiz: Quiz[];
 }
 
-interface Course {
+export interface Course {
   id: string;
   title: string;
   level: CourseLevel;
