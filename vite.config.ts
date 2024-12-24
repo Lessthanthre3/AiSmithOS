@@ -4,7 +4,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? '' : './', // Empty base for production
+  base: '/', // Root path for production
   plugins: [
     react(),
     nodePolyfills({
@@ -14,16 +14,10 @@ export default defineConfig({
       protocolImports: true,
     }),
   ],
-  define: {
-    'process.env': {}
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'es2020',
-    },
-  },
   build: {
-    sourcemap: process.env.NODE_ENV !== 'production',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -40,6 +34,14 @@ export default defineConfig({
         drop_debugger: true
       }
     }
+  },
+  define: {
+    'process.env': {}
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020',
+    },
   },
   server: {
     port: 5173,
