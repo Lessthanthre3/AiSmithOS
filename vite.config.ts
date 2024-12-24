@@ -4,7 +4,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: './', // Add base URL for Vercel deployment
+  base: process.env.NODE_ENV === 'production' ? '' : './', // Empty base for production
   plugins: [
     react(),
     nodePolyfills({
