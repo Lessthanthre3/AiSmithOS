@@ -2,14 +2,13 @@
   font-family: 'Share Tech Mono', monospace;
   line-height: 1.5;
   font-weight: 400;
-
   color: rgba(0, 255, 0, 0.87);
   background-color: #000000;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -18,18 +17,33 @@
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: #00ff00 #000000;
+  touch-action: manipulation;
+}
+
+*:not(input, textarea) {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+html {
+  height: -webkit-fill-available;
 }
 
 #root {
   width: 100vw;
   height: 100vh;
+  height: -webkit-fill-available;
 }
 
 .app-container {
@@ -43,7 +57,6 @@ body {
   position: relative;
 }
 
-/* Matrix background layer */
 .matrix-background {
   position: absolute;
   top: 0;
@@ -51,38 +64,69 @@ body {
   width: 100%;
   height: 100%;
   z-index: 0;
+  pointer-events: none;
 }
 
-/* App content layer */
 .app-content {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  z-index: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* Ensure desktop area excludes taskbar */
 .desktop-area {
   flex: 1;
   position: relative;
   overflow: hidden;
-  width: 100%;
-  height: calc(100% - 48px); /* Subtract taskbar height */
+  touch-action: none;
 }
 
-/* Taskbar container */
 .taskbar {
-  height: 48px;
   width: 100%;
-  position: relative;
   z-index: 1000;
 }
 
-/* Matrix-themed scrollbar styles */
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+  }
+
+  .taskbar {
+    height: 60px;
+  }
+
+  .window {
+    min-width: 300px !important;
+    width: 95vw !important;
+    max-height: 80vh !important;
+  }
+
+  button, 
+  [role="button"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@supports (padding: max(0px)) {
+  .app-container {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

@@ -84,6 +84,10 @@ const TokenTracker: React.FC = () => {
       <VStack spacing={4} align="stretch">
         <Text fontSize="xl" fontWeight="bold">$AIS Token Tracker</Text>
         
+        <Box borderWidth="1px" borderColor="#00ff00" p={3} borderRadius="md">
+          <Text fontSize="sm" mb={2}>Contract: {CONTRACT_ADDRESS}</Text>
+        </Box>
+        
         {pair ? (
           <>
             <Box borderWidth="1px" borderColor="#00ff00" p={3} borderRadius="md">

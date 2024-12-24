@@ -1,141 +1,160 @@
-import { VStack, Text, Box, Stat, StatLabel, StatNumber, StatHelpText, StatArrow, StatGroup, Divider, Spinner, useInterval, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
-import { useState, useEffect } from 'react';
-
-const TOKEN_ADDRESS = "ZNjDcVppJQV8Z9NECsuUhoM1VdJ3fvRtdFhDEaZpump";
-
-interface TokenPair {
-  chainId: string;
-  dexId: string;
-  priceUsd: string;
-  priceChange: {
-    h24?: number;
-    h6?: number;
-    h1?: number;
-    m5?: number;
-  };
-  liquidity?: {
-    usd: number;
-  };
-  volume?: {
-    h24: number;
-  };
-}
+import { VStack, HStack, Text, Box, Spinner, Stat, StatLabel, StatNumber, StatHelpText, StatArrow, Grid, GridItem, useToast } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
 
 interface TokenData {
-  pairs?: TokenPair[];
+  baseToken: {
+    name: string;
+    symbol: string;
+    address: string;
+  };
+  priceUsd: string;
+  volume24h: string;
+  liquidityUsd: string;
+  fdv: string;
+  priceChange24h: number;
+  pairAddress: string;
 }
+
+const TOKEN_ADDRESS = 'ZNjDcVppJQV8Z9NECsuUhoM1VdJ3fvRtdFhDEaZpump';
 
 const TokenDataWindow = () => {
   const [tokenData, setTokenData] = useState<TokenData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const fetchTokenData = async () => {
     try {
+      console.log('Fetching token data from DexScreener...');
       const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${TOKEN_ADDRESS}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch token data');
-      }
       const data = await response.json();
-      setTokenData(data);
-      setLoading(false);
+      
+      if (data.pairs && data.pairs[0]) {
+        console.log('Token data received:', data.pairs[0]);
+        // Sort pairs by liquidity to get the main pair
+        const mainPair = data.pairs.sort((a: any, b: any) => 
+          parseFloat(b.liquidity?.usd || '0') - parseFloat(a.liquidity?.usd || '0')
+        )[0];
+
+        setTokenData({
+          baseToken: mainPair.baseToken,
+          priceUsd: mainPair.priceUsd,
+          volume24h: mainPair.volume?.h24 || '0',
+          liquidityUsd: mainPair.liquidity?.usd || '0',
+          fdv: mainPair.fdv || '0',
+          priceChange24h: mainPair.priceChange?.h24 || 0,
+          pairAddress: mainPair.pairAddress
+        });
+        setError(null);
+      } else {
+        console.error('No pairs found in DexScreener response:', data);
+        throw new Error('No data available for this token');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching token data:', err);
+      setError('Failed to fetch token data');
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch token data',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchTokenData();
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchTokenData, 30000);
+    return () => clearInterval(interval);
   }, []);
-
-  // Refresh data every 30 seconds
-  useInterval(fetchTokenData, 30000);
 
   if (loading) {
     return (
-      <VStack spacing={6} p={4} color="matrix.500" align="center" justify="center" height="100%">
-        <Spinner color="#00ff00" size="xl" />
-        <Text>Loading token data...</Text>
+      <VStack h="100%" justify="center" align="center" spacing={4}>
+        <Spinner size="xl" color="matrix.500" />
+        <Text color="matrix.500">Loading token data...</Text>
       </VStack>
     );
   }
 
-  const pair = tokenData?.pairs?.[0];
+  if (error) {
+    return (
+      <VStack h="100%" justify="center" align="center" spacing={4}>
+        <Text color="red.500">{error}</Text>
+      </VStack>
+    );
+  }
 
   return (
-    <VStack spacing={6} p={4} color="matrix.500">
+    <VStack h="100%" p={6} spacing={6} bg="black" color="matrix.500">
       <Text fontSize="2xl" fontWeight="bold">$AIS Token Data</Text>
       
-      <Box width="100%" bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
-        <Text fontSize="sm" fontFamily="monospace" wordBreak="break-all">
-          Contract: {TOKEN_ADDRESS}
-        </Text>
-      </Box>
+      <Grid templateColumns="repeat(2, 1fr)" gap={6} w="100%">
+        <GridItem>
+          <Stat>
+            <StatLabel>Price USD</StatLabel>
+            <StatNumber>${parseFloat(tokenData?.priceUsd || '0').toFixed(6)}</StatNumber>
+            <StatHelpText>
+              <StatArrow type={tokenData?.priceChange24h && tokenData.priceChange24h >= 0 ? 'increase' : 'decrease'} />
+              {Math.abs(tokenData?.priceChange24h || 0).toFixed(2)}%
+            </StatHelpText>
+          </Stat>
+        </GridItem>
 
-      <StatGroup width="100%">
-        <Stat bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md" mr={2}>
-          <StatLabel>Price</StatLabel>
-          <StatNumber>${pair ? parseFloat(pair.priceUsd).toFixed(6) : '0.00'}</StatNumber>
-          <StatHelpText>
-            <Text color={pair.priceChange?.h24 >= 0 ? "green.500" : "red.500"}>
-              {pair.priceChange?.h24 >= 0 ? "+" : ""}{pair.priceChange?.h24}%
-            </Text>
-          </StatHelpText>
-        </Stat>
-        <Stat bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
-          <StatLabel>24h Volume</StatLabel>
-          <StatNumber>${pair?.volume?.h24.toLocaleString() ?? '0'}</StatNumber>
-          <StatHelpText>
-            <Text color={pair?.liquidity ? '#00ff00' : 'yellow.500'}>
-              Liquidity: ${pair?.liquidity?.usd.toLocaleString() ?? '0'}
-            </Text>
-          </StatHelpText>
-        </Stat>
-      </StatGroup>
+        <GridItem>
+          <Stat>
+            <StatLabel>24h Volume</StatLabel>
+            <StatNumber>
+              ${parseFloat(tokenData?.volume24h || '0').toLocaleString(undefined, {
+                maximumFractionDigits: 0
+              })}
+            </StatNumber>
+          </Stat>
+        </GridItem>
 
-      <Box width="100%" bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
-        <Text fontWeight="bold" mb={2}>Market Data</Text>
-        <VStack align="stretch" spacing={2}>
-          <Text>DEX: {pair?.dexId ?? 'N/A'}</Text>
-          <Text>Chain: {pair?.chainId ?? 'N/A'}</Text>
-          <Text>1h Change: {pair.priceChange?.h1 || 0}%</Text>
-          <Text>6h Change: {pair.priceChange?.h6 || 0}%</Text>
+        <GridItem>
+          <Stat>
+            <StatLabel>Liquidity</StatLabel>
+            <StatNumber>
+              ${parseFloat(tokenData?.liquidityUsd || '0').toLocaleString(undefined, {
+                maximumFractionDigits: 0
+              })}
+            </StatNumber>
+          </Stat>
+        </GridItem>
+
+        <GridItem>
+          <Stat>
+            <StatLabel>FDV</StatLabel>
+            <StatNumber>
+              ${parseFloat(tokenData?.fdv || '0').toLocaleString(undefined, {
+                maximumFractionDigits: 0
+              })}
+            </StatNumber>
+          </Stat>
+        </GridItem>
+      </Grid>
+
+      <Box w="100%" p={4} borderRadius="md" bg="rgba(0, 255, 0, 0.1)">
+        <VStack align="start" spacing={2}>
+          <Text>
+            <Text as="span" fontWeight="bold">Token: </Text>
+            {tokenData?.baseToken.name} ({tokenData?.baseToken.symbol})
+          </Text>
+          <Text>
+            <Text as="span" fontWeight="bold">Contract: </Text>
+            <Text as="span" fontSize="sm">{tokenData?.baseToken.address}</Text>
+          </Text>
+          <Text>
+            <Text as="span" fontWeight="bold">Pair Address: </Text>
+            <Text as="span" fontSize="sm">{tokenData?.pairAddress}</Text>
+          </Text>
         </VStack>
       </Box>
-
-      <Divider borderColor="matrix.500" opacity={0.3} />
-
-      <Box width="100%" bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
-        <Text fontWeight="bold" mb={2}>Token Metrics</Text>
-        <Text>Total Supply: 1,000,000,000</Text>
-      </Box>
-
-      <Table variant="simple" size="sm">
-        <Thead>
-          <Tr>
-            <Th color="green.300">Pair</Th>
-            <Th color="green.300" isNumeric>Price</Th>
-            <Th color="green.300" isNumeric>24h Volume</Th>
-            <Th color="green.300" isNumeric>24h Change</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {tokenData?.pairs?.map((pair, index) => (
-            <Tr key={index}>
-              <Td color="green.300">{pair.dexId}</Td>
-              <Td color="green.300" isNumeric>${parseFloat(pair.priceUsd).toFixed(4)}</Td>
-              <Td color="green.300" isNumeric>{(pair.volume?.h24 / 1000).toFixed(1)}k</Td>
-              <Td 
-                color={pair.priceChange.h24 && pair.priceChange.h24 > 0 ? "green.300" : "red.300"} 
-                isNumeric
-              >
-                {pair.priceChange.h24 ? `${pair.priceChange.h24.toFixed(2)}%` : 'N/A'}
-              </Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
     </VStack>
   );
 };

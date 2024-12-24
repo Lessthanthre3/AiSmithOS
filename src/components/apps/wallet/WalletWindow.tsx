@@ -1,100 +1,103 @@
-import { Box, Button, VStack, Text, useToast, Alert, AlertIcon, AlertDescription } from '@chakra-ui/react';
+import { VStack, HStack, Text, Button, Box, Stat, StatLabel, StatNumber, StatHelpText, StatArrow, useToast } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
 import { useWallet } from '../../../contexts/WalletContext';
-import { useState } from 'react';
+import { FaWallet, FaCopy } from 'react-icons/fa';
+import { heliusRpcRequest, TOKEN_IDS } from '../../../config/rpc';
+
+interface TokenData {
+  priceUsd: string;
+  priceChange24h: number;
+}
 
 const WalletWindow = () => {
-  const { 
-    publicKey, 
-    isConnected, 
-    isConnecting, 
-    connect, 
-    disconnect, 
-    connectionStatus,
-    retryConnection,
-    balance 
-  } = useWallet();
-  const [isRetrying, setIsRetrying] = useState(false);
+  const { publicKey, connect, disconnect, balance } = useWallet();
+  const [solPrice, setSolPrice] = useState<TokenData | null>(null);
   const toast = useToast();
 
-  const handleConnect = async () => {
+  const fetchTokenData = async () => {
     try {
-      await connect();
+      // Fetch SOL price from CoinGecko
+      const solResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd&include_24hr_change=true');
+      const solData = await solResponse.json();
+      if (solData.solana) {
+        setSolPrice({
+          priceUsd: solData.solana.usd.toString(),
+          priceChange24h: solData.solana.usd_24h_change
+        });
+      }
     } catch (error) {
-      // Error is already handled in WalletContext
+      console.error('Error fetching token data:', error);
     }
   };
 
-  const handleDisconnect = async () => {
-    try {
-      await disconnect();
-    } catch (error) {
-      // Error is already handled in WalletContext
+  useEffect(() => {
+    if (publicKey) {
+      fetchTokenData();
+      // Set up polling every 30 seconds
+      const interval = setInterval(() => {
+        fetchTokenData();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [publicKey]);
+
+  const handleCopyAddress = () => {
+    if (publicKey) {
+      navigator.clipboard.writeText(publicKey.toString());
+      toast({
+        title: 'Address copied',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      });
     }
   };
 
-  const handleRetry = async () => {
-    setIsRetrying(true);
-    try {
-      await retryConnection();
-    } finally {
-      setIsRetrying(false);
-    }
+  const formatBalance = (balance: number) => {
+    return balance.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4
+    });
   };
 
   return (
-    <Box p={4}>
-      <VStack spacing={4} align="stretch">
-        <Text color="green.300" fontSize="lg" fontWeight="bold">
-          Wallet Status
-        </Text>
-        
-        {connectionStatus === 'error' && (
-          <Alert status="error" variant="subtle" borderRadius="md">
-            <AlertIcon />
-            <AlertDescription>
-              Connection error. Please check your network connection.
-              <Button
-                ml={2}
-                size="sm"
-                colorScheme="red"
-                onClick={handleRetry}
-                isLoading={isRetrying}
-              >
-                Retry
+    <VStack spacing={4} p={4} align="stretch">
+      <Text fontSize="2xl" fontWeight="bold" color="matrix.500">Wallet</Text>
+      
+      {publicKey ? (
+        <>
+          <Box bg="whiteAlpha.100" p={3} borderRadius="md">
+            <HStack justify="space-between">
+              <Text color="matrix.500">Address: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}</Text>
+              <Button size="sm" leftIcon={<FaCopy />} variant="ghost" onClick={handleCopyAddress}>
+                Copy
               </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+            </HStack>
+          </Box>
 
-        {isConnected ? (
-          <>
-            <Text color="green.300">
-              Connected: {publicKey?.toString()}
-            </Text>
-            <Text color="green.300">
-              Balance: {balance.toFixed(4)} SOL
-            </Text>
-            <Button
-              onClick={handleDisconnect}
-              colorScheme="red"
-              variant="outline"
-              isLoading={isConnecting}
-            >
-              Disconnect
-            </Button>
-          </>
-        ) : (
-          <Button
-            onClick={handleConnect}
-            colorScheme="green"
-            variant="outline"
-            isLoading={isConnecting}
-          >
-            Connect Wallet
+          <Box bg="whiteAlpha.100" p={3} borderRadius="md">
+            <Stat>
+              <StatLabel color="matrix.500">SOL Balance</StatLabel>
+              <StatNumber color="matrix.500">{formatBalance(balance)} SOL</StatNumber>
+              {solPrice && (
+                <StatHelpText>
+                  <StatArrow type={solPrice.priceChange24h >= 0 ? 'increase' : 'decrease'} />
+                  {solPrice.priceChange24h.toFixed(2)}% (${parseFloat(solPrice.priceUsd).toFixed(2)})
+                </StatHelpText>
+              )}
+            </Stat>
+          </Box>
+
+          <Button colorScheme="red" onClick={disconnect}>
+            Disconnect
           </Button>
-        )}
-      </VStack>
-    </Box>
+        </>
+      ) : (
+        <Button leftIcon={<FaWallet />} onClick={connect}>
+          Connect Wallet
+        </Button>
+      )}
+    </VStack>
   );
 };
 

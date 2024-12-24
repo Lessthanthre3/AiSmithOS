@@ -18,7 +18,7 @@ const WindowManager = () => {
             size={window.size}
             zIndex={window.zIndex}
           >
-            {window.children}
+            {window.component}
           </Window>
         )
       ))}

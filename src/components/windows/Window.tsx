@@ -1,5 +1,5 @@
 import { Box, HStack, IconButton, Text, useToast } from '@chakra-ui/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { FaWindowMinimize, FaWindowMaximize, FaTimes } from 'react-icons/fa';
 import { useWindow } from '../../contexts/WindowContext';
 import { useWallet } from '../../contexts/WalletContext';
@@ -25,39 +25,61 @@ const Window = ({ id, appId, title, children, position, size, zIndex }: WindowPr
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isClosing, setIsClosing] = useState(false);
+  const [localPosition, setLocalPosition] = useState(position);
+  const [localSize, setLocalSize] = useState(size);
+
+  // Throttle position updates
+  useEffect(() => {
+    if (!isDragging) {
+      updateWindowPosition(id, localPosition);
+    }
+  }, [localPosition, isDragging, id, updateWindowPosition]);
+
+  // Throttle size updates
+  useEffect(() => {
+    if (!isResizing) {
+      updateWindowSize(id, localSize);
+    }
+  }, [localSize, isResizing, id, updateWindowSize]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging && windowRef.current) {
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+      setLocalPosition({ x: newX, y: newY });
+    } else if (isResizing && windowRef.current) {
+      const deltaX = e.clientX - resizeStart.x;
+      const deltaY = e.clientY - resizeStart.y;
+      const newWidth = Math.max(300, resizeStart.width + deltaX);
+      const newHeight = Math.max(400, resizeStart.height + deltaY);
+      setLocalSize({ width: newWidth, height: newHeight });
+    }
+  }, [isDragging, isResizing, dragOffset, resizeStart]);
+
+  const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      updateWindowPosition(id, localPosition);
+    }
+    if (isResizing) {
+      updateWindowSize(id, localSize);
+    }
+    setIsDragging(false);
+    setIsResizing(false);
+  }, [isDragging, isResizing, id, localPosition, localSize, updateWindowPosition, updateWindowSize]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging && windowRef.current) {
-        const newX = e.clientX - dragOffset.x;
-        const newY = e.clientY - dragOffset.y;
-        updateWindowPosition(id, { x: newX, y: newY });
-      } else if (isResizing && windowRef.current) {
-        const deltaX = e.clientX - resizeStart.x;
-        const deltaY = e.clientY - resizeStart.y;
-        const newWidth = Math.max(300, resizeStart.width + deltaX); // Minimum width
-        const newHeight = Math.max(400, resizeStart.height + deltaY); // Minimum height
-        updateWindowSize(id, { width: newWidth, height: newHeight });
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      setIsResizing(false);
-    };
-
     if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, dragOffset, resizeStart, id, updateWindowPosition, updateWindowSize]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (windowRef.current) {
       const rect = windowRef.current.getBoundingClientRect();
       setDragOffset({
@@ -66,9 +88,9 @@ const Window = ({ id, appId, title, children, position, size, zIndex }: WindowPr
       });
       setIsDragging(true);
     }
-  };
+  }, []);
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (windowRef.current) {
       setResizeStart({
@@ -79,122 +101,94 @@ const Window = ({ id, appId, title, children, position, size, zIndex }: WindowPr
       });
       setIsResizing(true);
     }
-  };
+  }, []);
 
-  const isAdminWallet = (address: string | null) => {
+  const isAdminWallet = useCallback((address: string | null) => {
     return address && ADMIN_WALLETS.includes(address);
-  };
+  }, []);
 
-  const handleClose = () => {
-    if (isClosing) return; // Prevent multiple close attempts
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
     setIsClosing(true);
     removeWindow(id);
-  };
+  }, [isClosing, id, removeWindow]);
 
-  const handleMinimize = () => {
+  const handleMinimize = useCallback(() => {
     minimizeWindow(id);
-  };
+  }, [id, minimizeWindow]);
+
+  // Memoize window styles
+  const windowStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    left: `${localPosition.x}px`,
+    top: `${localPosition.y}px`,
+    width: `${localSize.width}px`,
+    height: `${localSize.height}px`,
+    zIndex,
+    bg: 'black',
+    border: '1px solid',
+    borderColor: 'matrix.500',
+    borderRadius: 'md',
+    overflow: 'hidden',
+    transition: 'none',
+  }), [localPosition.x, localPosition.y, localSize.width, localSize.height, zIndex]);
 
   // Check if the window should be accessible - only on mount
   useEffect(() => {
     if (appId === 'raffle' && !isAdminWallet(publicKey?.toString() || null)) {
       toast({
         title: 'Access Denied',
-        description: 'This application requires admin privileges.',
+        description: 'Only admin wallets can access this feature.',
         status: 'error',
         duration: 5000,
+        isClosable: true,
       });
-      handleClose();
+      removeWindow(id);
     }
-  }, []); // Empty dependency array - only run on mount
+  }, [appId, publicKey, isAdminWallet, toast, removeWindow, id]);
 
   return (
-    <Box
-      ref={windowRef}
-      position="absolute"
-      left={position.x}
-      top={position.y}
-      width={size.width}
-      height={size.height}
-      bg="rgba(0, 0, 0, 0.9)"
-      borderRadius="md"
-      border="1px solid rgba(0, 255, 0, 0.3)"
-      boxShadow="0 0 10px rgba(0, 255, 0, 0.1)"
-      zIndex={zIndex}
-      overflow="hidden"
-      transition="border-color 0.2s"
-      _hover={{
-        borderColor: 'rgba(0, 255, 0, 0.5)',
-      }}
-    >
-      {/* Window Title Bar */}
+    <Box ref={windowRef} {...windowStyle}>
       <HStack
-        px={4}
-        h={10}
-        bg="rgba(0, 255, 0, 0.1)"
-        borderBottom="1px solid rgba(0, 255, 0, 0.2)"
+        p={2}
+        bg="black"
+        borderBottom="1px solid"
+        borderColor="matrix.500"
         onMouseDown={handleMouseDown}
         cursor="move"
         userSelect="none"
-        justify="space-between"
       >
-        <Text color="green.300" fontSize="sm" fontWeight="medium">
-          {title}
-        </Text>
-        <HStack spacing={2}>
-          <IconButton
-            aria-label="Minimize"
-            icon={<FaWindowMinimize />}
-            size="xs"
-            variant="ghost"
-            color="green.300"
-            onClick={handleMinimize}
-          />
-          <IconButton
-            aria-label="Maximize"
-            icon={<FaWindowMaximize />}
-            size="xs"
-            variant="ghost"
-            color="green.300"
-            onClick={() => {}}
-          />
-          <IconButton
-            aria-label="Close"
-            icon={<FaTimes />}
-            size="xs"
-            variant="ghost"
-            color="green.300"
-            onClick={handleClose}
-          />
-        </HStack>
+        <Text flex="1" color="matrix.500">{title}</Text>
+        <IconButton
+          aria-label="Minimize"
+          icon={<FaWindowMinimize />}
+          size="sm"
+          variant="ghost"
+          color="matrix.500"
+          onClick={handleMinimize}
+        />
+        <IconButton
+          aria-label="Close"
+          icon={<FaTimes />}
+          size="sm"
+          variant="ghost"
+          color="matrix.500"
+          onClick={handleClose}
+        />
       </HStack>
 
-      {/* Window Content */}
-      <Box p={4} height="calc(100% - 40px)" overflow="auto">
+      <Box p={4} height="calc(100% - 45px)" overflow="auto">
         {children}
       </Box>
 
-      {/* Resize Handle */}
       <Box
         position="absolute"
-        right={0}
         bottom={0}
+        right={0}
         width="15px"
         height="15px"
         cursor="nwse-resize"
         onMouseDown={handleResizeStart}
-        _before={{
-          content: '""',
-          position: 'absolute',
-          right: '2px',
-          bottom: '2px',
-          width: '10px',
-          height: '10px',
-          borderRight: '2px solid',
-          borderBottom: '2px solid',
-          borderColor: 'green.400',
-          opacity: 0.7,
-        }}
       />
     </Box>
   );

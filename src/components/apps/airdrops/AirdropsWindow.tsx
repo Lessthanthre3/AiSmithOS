@@ -1,70 +1,47 @@
-import { VStack, Text, Table, Thead, Tbody, Tr, Th, Td, Badge, Box, Stat, StatLabel, StatNumber, StatGroup } from '@chakra-ui/react';
-import { useState } from 'react';
-import { useWallet } from '../../../contexts/WalletContext';
-
-interface AirdropEntry {
-  id: string;
-  address: string;
-  timestamp: string;
-  amount: number;
-}
+import { VStack, Text, Box, Icon, Button } from '@chakra-ui/react';
+import { FaGift } from 'react-icons/fa';
 
 const AirdropsWindow = () => {
-  const { publicKey, isConnected } = useWallet();
-  const [entries, setEntries] = useState<AirdropEntry[]>([]);
-
   return (
-    <VStack spacing={6} p={4} color="matrix.500" align="stretch">
+    <VStack
+      spacing={6}
+      p={6}
+      h="100%"
+      color="matrix.500"
+      align="center"
+      justify="center"
+    >
+      <Icon as={FaGift} boxSize={12} />
       <Text fontSize="2xl" fontWeight="bold">$AIS Airdrops</Text>
-
-      {/* Summary Stats */}
-      <StatGroup width="100%" bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
-        <Stat>
-          <StatLabel>Next Airdrop</StatLabel>
-          <StatNumber>TBA</StatNumber>
-        </Stat>
-        <Stat>
-          <StatLabel>Last Airdrop</StatLabel>
-          <StatNumber>TBA</StatNumber>
-        </Stat>
-      </StatGroup>
-
-      {/* Airdrop Table */}
-      <Table variant="simple" size="sm">
-        <Thead>
-          <Tr>
-            <Th color="matrix.500">Date</Th>
-            <Th color="matrix.500">Amount</Th>
-            <Th color="matrix.500">Recipients</Th>
-            <Th color="matrix.500">Status</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {entries.length > 0 ? (
-            entries.map((entry) => (
-              <Tr key={entry.id}>
-                <Td>{entry.timestamp}</Td>
-                <Td isNumeric>{entry.amount.toLocaleString()} $AIS</Td>
-                <Td>{entry.address}</Td>
-                <Td>Completed</Td>
-              </Tr>
-            ))
-          ) : (
-            <Tr>
-              <Td colSpan={4} textAlign="center">No airdrop data available</Td>
-            </Tr>
-          )}
-        </Tbody>
-      </Table>
-
-      {/* Information Box */}
-      <Box width="100%" bg="rgba(0, 255, 0, 0.1)" p={4} borderRadius="md">
-        <Text fontWeight="bold" mb={2}>Airdrop Information</Text>
-        <Text>• Airdrops are distributed to eligible wallets</Text>
-        <Text>• Eligibility is based on $AIS holdings and activity</Text>
-        <Text>• Distribution dates will be announced in advance</Text>
-        <Text>• Connect your wallet to check eligibility</Text>
+      
+      <Box
+        p={6}
+        borderRadius="md"
+        bg="rgba(0, 255, 0, 0.1)"
+        border="1px solid"
+        borderColor="matrix.500"
+        textAlign="center"
+        w="100%"
+        maxW="500px"
+      >
+        <Text mb={4}>
+          No active airdrops at the moment.
+        </Text>
+        <Text fontSize="sm" opacity={0.8}>
+          Future airdrops will be tracked and displayed here through our upcoming airdrop tracking system.
+        </Text>
       </Box>
+
+      <Button
+        variant="outline"
+        colorScheme="green"
+        size="sm"
+        opacity={0.6}
+        cursor="not-allowed"
+        _hover={{ opacity: 0.6 }}
+      >
+        Coming Soon
+      </Button>
     </VStack>
   );
 };

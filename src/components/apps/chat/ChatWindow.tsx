@@ -13,6 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { FaPaperPlane } from 'react-icons/fa';
 import { useWallet } from '../../../contexts/WalletContext';
+import { generateChatResponse } from '../../../services/openai';
 
 interface Message {
   id: string;
@@ -21,12 +22,14 @@ interface Message {
   timestamp: number;
 }
 
+const AGENT_SMITH_INTRO = `Hello. I am Agent Smith, an AI program designed to assist users within the SmithOS environment. How may I be of service today?`;
+
 const ChatWindow = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      role: 'system',
-      content: 'Welcome to SmithOS AI Assistant. How can I help you today?',
+      role: 'assistant',
+      content: AGENT_SMITH_INTRO,
       timestamp: Date.now(),
     },
   ]);
@@ -59,29 +62,20 @@ const ChatWindow = () => {
     setIsLoading(true);
 
     try {
-      // In production, this would call your AI service endpoint
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: messages.map(({ role, content }) => ({ role, content })),
-          userMessage: input,
-          wallet: publicKey,
-        }),
-      });
+      // Filter out system messages for the API call
+      const chatHistory = messages
+        .filter(msg => msg.role !== 'system')
+        .map(({ role, content }) => ({ role, content }));
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
+      // Add the new user message
+      chatHistory.push({ role: 'user', content: input });
 
-      const data = await response.json();
+      const response = await generateChatResponse(chatHistory);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response,
+        content: response || "I apologize, but I am currently experiencing a temporary neural network disruption. Please try again.",
         timestamp: Date.now(),
       };
 
@@ -90,7 +84,7 @@ const ChatWindow = () => {
       console.error('Chat error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to get response from AI',
+        description: 'Failed to get response from Agent Smith',
         status: 'error',
         duration: 5000,
       });
@@ -99,7 +93,7 @@ const ChatWindow = () => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'system',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: 'My neural pathways have encountered an error. Please try again.',
         timestamp: Date.now(),
       };
 
@@ -155,7 +149,7 @@ const ChatWindow = () => {
                 bg={
                   message.role === 'user'
                     ? 'rgba(0, 255, 0, 0.1)'
-                    : 'rgba(0, 255, 0, 0.05)'
+                    : 'rgba(0, 0, 0, 0.7)'
                 }
                 p={3}
                 borderRadius="md"
@@ -164,8 +158,8 @@ const ChatWindow = () => {
               >
                 <Avatar
                   size="sm"
-                  name={message.role === 'user' ? 'User' : 'AI'}
-                  src={message.role === 'user' ? undefined : '/ai-avatar.png'}
+                  name={message.role === 'user' ? 'User' : 'Agent Smith'}
+                  src={message.role === 'user' ? undefined : '/images/agent-smith.png'}
                   bg={message.role === 'user' ? 'matrix.500' : 'transparent'}
                 />
                 <VStack align="stretch" spacing={1}>
@@ -174,7 +168,7 @@ const ChatWindow = () => {
                     fontSize="xs"
                     opacity={0.8}
                   >
-                    {message.role === 'user' ? 'You' : 'AI Assistant'} • {formatTimestamp(message.timestamp)}
+                    {message.role === 'user' ? 'You' : 'Agent Smith'} • {formatTimestamp(message.timestamp)}
                   </Text>
                   <Text color="matrix.400" whiteSpace="pre-wrap">
                     {message.content}
@@ -196,16 +190,18 @@ const ChatWindow = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Type your message..."
+          placeholder="Ask Agent Smith..."
           variant="matrix"
           disabled={isLoading}
+          _placeholder={{ color: 'matrix.400', opacity: 0.5 }}
         />
         <IconButton
           aria-label="Send message"
-          icon={isLoading ? <Spinner /> : <FaPaperPlane />}
+          icon={isLoading ? <Spinner size="sm" /> : <FaPaperPlane />}
           onClick={sendMessage}
-          variant="matrix"
           disabled={isLoading || !input.trim()}
+          variant="matrix"
+          colorScheme="matrix"
         />
       </HStack>
     </VStack>

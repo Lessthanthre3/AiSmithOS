@@ -8,6 +8,7 @@ import WindowManager from './components/windows/WindowManager';
 import { WalletProvider } from './contexts/WalletContext';
 import { WindowProvider } from './contexts/WindowContext';
 import { SystemProvider } from './contexts/SystemContext';
+import { SessionProvider } from './contexts/SessionContext';
 import theme from './theme';
 
 function App() {
@@ -17,20 +18,22 @@ function App() {
         <SystemProvider>
           <WalletProvider>
             <WindowProvider>
-              <div className="app-container">
-                <div className="matrix-background">
-                  <MatrixRain />
-                </div>
-                <div className="app-content">
-                  <div className="desktop-area">
-                    <Desktop />
-                    <WindowManager />
+              <SessionProvider>
+                <div className="app-container">
+                  <div className="matrix-background">
+                    <MatrixRain />
                   </div>
-                  <div className="taskbar">
-                    <Taskbar />
+                  <div className="app-content">
+                    <div className="desktop-area">
+                      <Desktop />
+                      <WindowManager />
+                    </div>
+                    <div className="taskbar">
+                      <Taskbar />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </SessionProvider>
             </WindowProvider>
           </WalletProvider>
         </SystemProvider>

@@ -1,31 +1,86 @@
 import { Connection, Commitment } from '@solana/web3.js';
 
-// List of reliable Solana mainnet RPC endpoints with weights
-const RPC_ENDPOINTS = [
-  {
-    url: 'https://solana-mainnet.g.alchemy.com/v2/demo',
-    weight: 3, // Higher weight = higher priority
-  },
-  {
-    url: 'https://api.mainnet-beta.solana.com',
-    weight: 2,
-  },
-  {
-    url: 'https://rpc.ankr.com/solana',
-    weight: 2,
-  },
-  {
-    url: 'https://solana-api.projectserum.com',
-    weight: 1,
+// Primary RPC endpoints
+const RPC_ENDPOINTS = {
+  HELIUS: 'https://mainnet.helius-rpc.com',
+  GENESYSGO: 'https://ssc-dao.genesysgo.net',
+  QUICKNODE: import.meta.env.VITE_QUICKNODE_URL,
+} as const;
+
+// API Keys
+const HELIUS_KEYS = {
+  PRIMARY: import.meta.env.VITE_HELIUS_API_KEY,
+  SECONDARY: import.meta.env.VITE_HELIUS_API_KEY_2
+} as const;
+
+// Debug log for API keys
+console.log('Loaded API Keys:', {
+  PRIMARY: HELIUS_KEYS.PRIMARY ? 'Present' : 'Missing',
+  SECONDARY: HELIUS_KEYS.SECONDARY ? 'Present' : 'Missing'
+});
+
+// Token IDs
+export const TOKEN_IDS = {
+  AIS: 'F9Lw3ki3hJ7PF9HQXsBzoY8GyE6sPoEZZdXJBsTTD2rk'
+} as const;
+
+// Get appropriate endpoint based on method
+export const getRpcEndpoint = (method: string) => {
+  // Use either key for getAsset
+  const key = HELIUS_KEYS.PRIMARY || HELIUS_KEYS.SECONDARY;
+
+  if (!key) {
+    console.error('No Helius API key available');
+    throw new Error('No API key available');
   }
-];
 
-let currentEndpointIndex = 0;
-let failureCount = 0;
-const MAX_FAILURES = 2;
+  return `${RPC_ENDPOINTS.HELIUS}/?api-key=${key}`;
+};
+
+export const getCurrentEndpoint = () => getRpcEndpoint('getAsset');
+
+export const getConnectionConfig = () => ({
+  commitment: 'confirmed' as const,
+  confirmTransactionInitialTimeout: 60000,
+  disableRetryOnRateLimit: false,
+  httpHeaders: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Helper function for making RPC requests to Helius
+export const heliusRpcRequest = async (method: string, params: any) => {
+  const endpoint = getRpcEndpoint(method);
+  
+  // Debug log
+  console.log(`Making ${method} request to Helius`);
+  
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 'my-id',
+      method,
+      params
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error.message || 'RPC Error');
+  }
+
+  return data;
+};
+
 const CONNECTION_TIMEOUT = 5000; // 5 seconds
-
-export const getCurrentEndpoint = () => RPC_ENDPOINTS[currentEndpointIndex].url;
 
 const validateConnection = async (endpoint: string): Promise<boolean> => {
   try {
@@ -46,55 +101,13 @@ const validateConnection = async (endpoint: string): Promise<boolean> => {
 
     return true;
   } catch (error) {
-    console.warn(`RPC endpoint ${endpoint} validation failed:`, error);
+    console.error('RPC connection validation failed:', error);
     return false;
   }
 };
 
-export const rotateEndpoint = async (): Promise<string> => {
-  let attempts = RPC_ENDPOINTS.length;
-  
-  while (attempts > 0) {
-    currentEndpointIndex = (currentEndpointIndex + 1) % RPC_ENDPOINTS.length;
-    const endpoint = RPC_ENDPOINTS[currentEndpointIndex].url;
-    
-    // Validate the new endpoint before returning it
-    if (await validateConnection(endpoint)) {
-      console.log(`Switched to RPC endpoint: ${endpoint}`);
-      return endpoint;
-    }
-    
-    attempts--;
-  }
-  
-  throw new Error('No valid RPC endpoints available');
-};
-
-export const handleRpcError = async (error: any) => {
-  const isRateLimitError = error.message?.includes('403') || 
-                          error.message?.includes('429') ||
-                          error.message?.includes('exceeded') ||
-                          error.message?.includes('too many requests');
-                          
-  const isTimeoutError = error.message?.includes('timeout') || 
-                        error.message?.includes('timed out');
-                        
-  const isConnectionError = error.message?.includes('failed to fetch') ||
-                           error.message?.includes('network error') ||
-                           error.message?.includes('connection refused');
-
-  if (isRateLimitError || isTimeoutError || isConnectionError) {
-    failureCount++;
-    if (failureCount >= MAX_FAILURES) {
-      failureCount = 0;
-      await rotateEndpoint();
-    }
-    
-    // Add exponential backoff
-    const backoffMs = Math.min(1000 * Math.pow(2, failureCount), 10000);
-    await new Promise(resolve => setTimeout(resolve, backoffMs));
-    return true; // Indicate retry is needed
-  }
-  
-  return false; // Don't retry for other errors
+export const handleRpcError = async (error: any): Promise<boolean> => {
+  console.error('RPC Error:', error);
+  // TODO: Implement RPC fallback logic
+  return false;
 };

@@ -18,10 +18,11 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-// Admin wallet addresses (should be stored in a secure database in production)
+// Admin wallet addresses from environment variables
 const ADMIN_WALLETS = new Set([
-  process.env.ADMIN_WALLET_1,
-  process.env.ADMIN_WALLET_2
+  process.env.VITE_ADMIN_WALLET_1, // Dev Wallet
+  process.env.VITE_ADMIN_WALLET_2, // Treasury Wallet
+  process.env.VITE_ADMIN_WALLET_3  // Raffle Wallet
 ]);
 
 // JWT secret (should be a strong, unique value in production)
@@ -29,16 +30,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret';
 
 interface AuthRequest extends Request {
   body: {
-    password: string;
     signature: string;
     publicKey: string;
     timestamp: number;
   }
 }
 
+// Admin authentication
 export const authenticateAdmin = async (req: AuthRequest, res: Response) => {
   try {
-    const { password, signature, publicKey, timestamp } = req.body;
+    const { signature, publicKey, timestamp } = req.body;
 
     // Verify timestamp to prevent replay attacks
     const now = Date.now();
@@ -61,12 +62,6 @@ export const authenticateAdmin = async (req: AuthRequest, res: Response) => {
 
     if (!isValidSignature) {
       return res.status(401).json({ error: 'Invalid signature' });
-    }
-
-    // Verify password (in production, use proper password hashing like bcrypt)
-    const hashedPassword = nacl.hash(Buffer.from(password));
-    if (hashedPassword.toString('hex') !== process.env.ADMIN_PASSWORD_HASH) {
-      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Generate JWT token
@@ -95,7 +90,7 @@ export const authenticateAdmin = async (req: AuthRequest, res: Response) => {
 };
 
 // Middleware to verify admin JWT token
-export const verifyAdminToken = (req: Request, res: Response, next: Function) => {
+export const verifyAdminToken = (req: AuthenticatedRequest, res: Response, next: Function) => {
   const token = req.cookies.admin_token;
 
   if (!token) {
@@ -103,7 +98,7 @@ export const verifyAdminToken = (req: Request, res: Response, next: Function) =>
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as { publicKey: string; role: string };
     req.user = decoded;
     next();
   } catch (error) {
@@ -115,4 +110,45 @@ export const verifyAdminToken = (req: Request, res: Response, next: Function) =>
 export const logoutAdmin = (req: Request, res: Response) => {
   res.clearCookie('admin_token');
   return res.json({ success: true });
+};
+
+// Get admin statistics
+export const getAdminStats = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user || !ADMIN_WALLETS.has(req.user.publicKey)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // TODO: Implement actual statistics gathering
+    const stats = {
+      totalUsers: 1234,
+      activeUsers: 567,
+      totalTransactions: 89012
+    };
+
+    return res.json(stats);
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Emergency stop
+export const emergencyStop = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user || !ADMIN_WALLETS.has(req.user.publicKey)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // TODO: Implement emergency stop functionality
+    // This could include:
+    // - Pausing all transactions
+    // - Stopping certain smart contracts
+    // - Logging the emergency action
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error executing emergency stop:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 };
