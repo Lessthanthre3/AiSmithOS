@@ -4,7 +4,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/AiSmithOS/', // Add base URL for GitHub Pages
+  base: './', // Add base URL for Vercel deployment
   plugins: [
     react(),
     nodePolyfills({
