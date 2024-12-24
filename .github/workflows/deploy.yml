@@ -31,6 +31,16 @@ jobs:
           VITE_HELIUS_API_KEY_2: ${{ secrets.VITE_HELIUS_API_KEY_2 }}
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
 
+      - name: Create gh-pages branch if not exists
+        run: |
+          if ! git ls-remote --heads origin gh-pages; then
+            git checkout --orphan gh-pages
+            git reset --hard
+            git commit --allow-empty -m "Create gh-pages branch"
+            git push origin gh-pages
+            git checkout master
+          fi
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
